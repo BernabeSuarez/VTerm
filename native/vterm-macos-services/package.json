@@ -1,0 +1,11 @@
+{
+  "name": "@vterm/macos-services",
+  "version": "0.1.0",
+  "description": "Registra VTerm como proveedor de servicios NSServices en macOS (Abrir en VTerm)",
+  "main": "js/index.js",
+  "license": "MIT",
+  "gypfile": true,
+  "dependencies": {
+    "node-addon-api": "^8.3.0"
+  }
+}

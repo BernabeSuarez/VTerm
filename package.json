@@ -1,0 +1,47 @@
+{
+  "name": "terminal-app",
+  "version": "0.1.0",
+  "description": "Terminal multiplataforma construida con Electron + Vite + React + xterm.js",
+  "main": "./out/main/index.js",
+  "author": "Bernabe",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "build:mac": "electron-vite build && electron-rebuild -f -w @vterm/macos-services && electron-builder --mac",
+    "rebuild:mac": "electron-rebuild -f -w @vterm/macos-services",
+    "build:win": "electron-vite build && electron-builder --win",
+    "build:linux": "electron-vite build && electron-builder --linux",
+    "preview": "electron-vite preview",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/spawn-helper && node scripts/rebuild-native.mjs"
+  },
+  "dependencies": {
+    "@fontsource/cascadia-code": "^5.3.0",
+    "@vterm/macos-services": "file:native/vterm-macos-services",
+    "@xterm/addon-fit": "^0.10.0",
+    "@xterm/addon-search": "^0.15.0",
+    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/addon-webgl": "^0.18.0",
+    "@xterm/xterm": "^5.5.0",
+    "node-pty": "^1.0.0",
+    "react-resizable-panels": "^4.12.4"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "@electron/rebuild": "^3.6.0",
+    "autoprefixer": "^10.4.20",
+    "electron": "^31.4.0",
+    "electron-builder": "^24.13.3",
+    "electron-vite": "^2.3.0",
+    "postcss": "^8.4.45",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.4"
+  }
+}

@@ -1,0 +1,33 @@
+appId: com.bernabe.terminal-app
+productName: VTerm
+directories:
+  buildResources: resources
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - node_modules/@vterm/macos-services/**/*.node
+mac:
+  category: public.app-category.developer-tools
+  target: [dmg, zip]
+  extendInfo:
+    CFBundleDocumentTypes:
+      - CFBundleTypeName: Folder
+        CFBundleTypeRole: Viewer
+        LSItemContentTypes:
+          - public.folder
+    NSServices:
+      - NSMenuItem:
+          default: Abrir en VTerm
+        NSMessage: openFolderInVTerm
+        NSPortName: VTerm
+        NSSendFileTypes:
+          - public.folder
+win:
+  target: [nsis]
+nsis:
+  include: build/installer.nsh
+linux:
+  target: [AppImage, deb]
+  category: Development
+npmRebuild: true

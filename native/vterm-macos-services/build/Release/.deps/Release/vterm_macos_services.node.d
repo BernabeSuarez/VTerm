@@ -1,0 +1,1 @@
+cmd_Release/vterm_macos_services.node := c++ -bundle -undefined dynamic_lookup -Wl,-search_paths_first -mmacosx-version-min=10.15 -arch x86_64 -L./Release -stdlib=libc++  -o Release/vterm_macos_services.node Release/obj.target/vterm_macos_services/src/provider.o Release/nothing.a -framework AppKit -framework Foundation
