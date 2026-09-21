@@ -30,6 +30,7 @@ Los instaladores quedan en `dist/`.
 ## Agregar un tema nuevo
 
 Sumá un objeto al array `themes` en `src/renderer/src/themes/index.ts` con:
+
 - `terminal`: los 16 colores ANSI + fondo/texto/cursor (formato `ITheme` de xterm.js)
 - `ui`: los colores del chrome (tabs, bordes, fondo de la ventana)
 
@@ -92,15 +93,6 @@ open -a dist/mac/VTerm.app "/ruta/a/una carpeta"   # o desde Finder: clic derech
 ```
 
 La integración de Finder usa el mecanismo nativo `NSServices` (declarado en `electron-builder.yml` → `mac.extendInfo`), así que requiere la app instalada/empaquetada para aparecer en el menú.
-
-## Roadmap sugerido
-
-- [ ] Atajos de teclado (Cmd/Ctrl+T nueva pestaña, Cmd/Ctrl+W cerrar, Cmd/Ctrl+1..9 saltar a pestaña)
-- [ ] Splits (dividir el panel horizontal/verticalmente)
-- [x] Perfiles de shell configurables (bash, zsh, fish, PowerShell, WSL)
-- [ ] Buscar dentro del scrollback (`xterm-addon-search` ya está instalado)
-- [x] Persistir configuración (fuente, tamaño, tema) en un archivo de config en vez de solo `localStorage`
-- [ ] Auto-actualización (`electron-updater`)
 
 ## Notas de rendimiento
 
