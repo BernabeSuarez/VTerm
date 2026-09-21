@@ -3,7 +3,7 @@ import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
-import { useTheme } from "../ThemeContext";
+import { useConfig } from "../ConfigContext";
 // El bundler procesa la hoja de estilos como un efecto secundario.
 import "@xterm/xterm/css/xterm.css";
 
@@ -16,6 +16,8 @@ interface TerminalPaneProps {
   closable: boolean;
   /** directorio de trabajo inicial de la sesión (para "Abrir en VTerm") */
   terminalCwd?: string;
+  /** id del perfil de shell a usar para esta sesión */
+  terminalProfile?: string;
   onSplit: (paneId: string, direction: "horizontal" | "vertical") => void;
   onClose: (paneId: string) => void;
 }
@@ -25,6 +27,7 @@ export function TerminalPane({
   active,
   closable,
   terminalCwd,
+  terminalProfile,
   onSplit,
   onClose,
 }: TerminalPaneProps): JSX.Element {
@@ -35,18 +38,18 @@ export function TerminalPane({
   const onCloseRef = useRef(onClose);
   onSplitRef.current = onSplit;
   onCloseRef.current = onClose;
-  const { theme } = useTheme();
+  const { theme, config, updateFont } = useConfig();
 
   // Crear la instancia de xterm.js y el proceso pty asociado (una sola vez)
   useEffect(() => {
     if (!containerRef.current) return;
 
     const xterm = new XTerm({
-      fontFamily: 'Cascadia Code, Menlo, Consolas, "SF Mono", monospace',
-      fontWeight: 400,
-      fontWeightBold: 700,
-      fontSize: 14,
-      cursorBlink: true,
+      fontFamily: config.font.family,
+      fontWeight: config.font.weight,
+      fontWeightBold: config.font.weightBold,
+      fontSize: config.font.size,
+      cursorBlink: config.font.cursorBlink,
       allowProposedApi: true,
       theme: theme.terminal,
     });
@@ -72,7 +75,7 @@ export function TerminalPane({
       window.terminalAPI.write(id, data),
     );
 
-    window.terminalAPI.spawn(id, xterm.cols, xterm.rows, terminalCwd);
+    window.terminalAPI.spawn(id, xterm.cols, xterm.rows, terminalCwd, terminalProfile);
     window.terminalAPI.resize(id, xterm.cols, xterm.rows);
 
     let disposed = false;
@@ -152,6 +155,22 @@ export function TerminalPane({
     if (xtermRef.current) xtermRef.current.options.theme = theme.terminal;
   }, [theme]);
 
+  // Aplicar cambios de fuente (familia, tamaño) en caliente y re-ajustar
+  useEffect(() => {
+    const xterm = xtermRef.current;
+    if (!xterm) return;
+    xterm.options.fontFamily = config.font.family;
+    xterm.options.fontSize = config.font.size;
+    xterm.options.fontWeight = config.font.weight;
+    xterm.options.fontWeightBold = config.font.weightBold;
+    xterm.options.cursorBlink = config.font.cursorBlink;
+    try {
+      fitAddonRef.current?.fit();
+    } catch {
+      // el contenedor aún no tiene tamaño; el ResizeObserver lo reajustará
+    }
+  }, [config.font]);
+
   // Re-ajustar tamaño y recuperar el foco cuando la pestaña vuelve a estar activa
   useEffect(() => {
     if (!active) return;
@@ -180,6 +199,20 @@ export function TerminalPane({
         style={{ width: "100%", height: "100%", padding: "8px" }}
       />
       <div className="pane-toolbar">
+        <button
+          onClick={() => updateFont({ size: Math.min(config.font.size + 1, 28) })}
+          title="Aumentar tamaño de letra"
+          aria-label="Aumentar tamaño de letra"
+        >
+          A+
+        </button>
+        <button
+          onClick={() => updateFont({ size: Math.max(config.font.size - 1, 8) })}
+          title="Disminuir tamaño de letra"
+          aria-label="Disminuir tamaño de letra"
+        >
+          A−
+        </button>
         <button
           onClick={() => onSplit(id, "horizontal")}
           title="Dividir a la derecha (Cmd/Ctrl+Shift+D)"

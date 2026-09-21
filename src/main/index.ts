@@ -3,9 +3,11 @@ import { join } from 'path'
 import * as pty from 'node-pty'
 import { getDirectoryFromLaunchArguments } from './directories'
 import { openTerminalAt, flushPendingDirectories } from './terminal-open'
+import { loadConfig, saveConfig } from './config'
 import { installLinuxIntegration } from './linux-integration'
 import { installMacServices } from './platform/darwin'
 import { installWindowsIntegration } from './platform/win32'
+import { resolveProfile, listAvailableProfiles } from './profiles'
 import { vtermLog } from './log'
 
 // --- Integraciones de menú contextual por sistema operativo ---
@@ -71,7 +73,10 @@ function sendToRenderer(sender: Electron.WebContents, channel: string, payload: 
 
 ipcMain.handle(
   'pty:spawn',
-  (event, { id, cols, rows, cwd }: { id: string; cols: number; rows: number; cwd?: string }) => {
+  (
+    event,
+    { id, cols, rows, cwd, profile }: { id: string; cols: number; rows: number; cwd?: string; profile?: string }
+  ) => {
     const existing = ptyProcesses.get(id)
     if (existing) {
       try {
@@ -82,8 +87,10 @@ ipcMain.handle(
       return { pid: existing.pid }
     }
 
-    const shell = getDefaultShell()
-    const shellProcess = pty.spawn(shell, [], {
+    const resolved = resolveProfile(profile)
+    const shell = resolved?.shell || getDefaultShell()
+    const args = resolved?.args || []
+    const shellProcess = pty.spawn(shell, args, {
       name: 'xterm-256color',
       cols: cols || 80,
       rows: rows || 24,
@@ -105,6 +112,12 @@ ipcMain.handle(
     return { pid: shellProcess.pid }
   }
 )
+
+ipcMain.handle('profiles:list', () => listAvailableProfiles())
+
+// --- Configuración persistente ===
+ipcMain.handle('config:get', () => loadConfig())
+ipcMain.handle('config:set', (_event, patch: Parameters<typeof saveConfig>[0]) => saveConfig(patch))
 
 ipcMain.on('pty:write', (_event, { id, data }: { id: string; data: string }) => {
   ptyProcesses.get(id)?.write(data)

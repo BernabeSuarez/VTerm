@@ -12,6 +12,7 @@ interface TabBarProps {
   onClose: (id: string) => void;
   onNew: () => void;
   onOpenThemes: () => void;
+  onOpenProfiles: () => void;
 }
 
 export function TabBar({
@@ -21,6 +22,7 @@ export function TabBar({
   onClose,
   onNew,
   onOpenThemes,
+  onOpenProfiles,
 }: TabBarProps): JSX.Element {
   return (
     <div className="tab-bar">
@@ -57,6 +59,9 @@ export function TabBar({
           +
         </button>
       </div>
+      <button className="tab-bar__profiles" onClick={onOpenProfiles}>
+        Shell
+      </button>
       <button className="tab-bar__themes" onClick={onOpenThemes}>
         Cambiar Tema
       </button>

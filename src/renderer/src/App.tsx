@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { ThemeProvider } from './ThemeContext'
+import { ConfigProvider, useConfig } from './ConfigContext'
 import { PaneTree } from './components/PaneTree'
 import { TabBar } from './components/TabBar'
 import { ThemeSwitcher } from './components/ThemeSwitcher'
+import { ProfileSwitcher } from './components/ProfileSwitcher'
 import {
   createRootPane,
   collectPaneIds,
@@ -17,6 +18,7 @@ interface Tab {
   title: string
   root: TreeNode
   cwd?: string
+  profileId: string
 }
 
 function createTabId(): string {
@@ -29,23 +31,29 @@ function folderLabel(cwd?: string): string {
   return base || cwd
 }
 
-function makeInitialTab(cwd?: string): Tab {
-  return { id: createTabId(), title: folderLabel(cwd), root: createRootPane(), cwd }
-}
-
 function AppContent(): JSX.Element {
-  const [tabs, setTabs] = useState<Tab[]>([makeInitialTab()])
+  const { config, loaded, setDefaultProfile } = useConfig()
+  const [tabs, setTabs] = useState<Tab[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [showThemes, setShowThemes] = useState(false)
+  const [showProfiles, setShowProfiles] = useState(false)
   const tabsRef = useRef(tabs)
   tabsRef.current = tabs
 
-  const currentActive = activeId ?? tabs[0].id
-
   function createTab(cwd?: string): Tab {
     const title = cwd ? folderLabel(cwd) : `Terminal ${tabsRef.current.length + 1}`
-    return { id: createTabId(), title, root: createRootPane(), cwd }
+    return { id: createTabId(), title, root: createRootPane(), cwd, profileId: config.defaultProfile }
   }
+
+  // La primera pestaña se crea recién cuando la config está cargada, para que
+  // herede el tema, la fuente y el perfil guardados.
+  useEffect(() => {
+    if (!loaded || tabsRef.current.length > 0) return
+    const tab = createTab()
+    setTabs([tab])
+    setActiveId(tab.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded])
 
   useEffect(() => {
     const unsubscribe = window.terminalAPI.onOpenFolder((paths) => {
@@ -56,6 +64,9 @@ function AppContent(): JSX.Element {
     return unsubscribe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  const currentActive = activeId ?? tabs[0]?.id
+  if (!loaded || tabs.length === 0) return <div className="app" />
 
   const mutateTabRoot = (tabId: string, transform: (root: TreeNode) => TreeNode | null): void => {
     const prev = tabsRef.current
@@ -113,6 +124,7 @@ function AppContent(): JSX.Element {
         onClose={closeTab}
         onNew={addTab}
         onOpenThemes={() => setShowThemes(true)}
+        onOpenProfiles={() => setShowProfiles(true)}
       />
       <div className="app__terminals">
         {tabs.map((tab) => (
@@ -126,6 +138,7 @@ function AppContent(): JSX.Element {
               tabActive={tab.id === currentActive}
               anyClosable={countPanes(tab.root) > 1}
               cwd={tab.cwd}
+              profileId={tab.profileId}
               onSplit={handleSplit}
               onClose={handleClosePane}
             />
@@ -133,14 +146,15 @@ function AppContent(): JSX.Element {
         ))}
       </div>
       {showThemes && <ThemeSwitcher onClose={() => setShowThemes(false)} />}
+      {showProfiles && <ProfileSwitcher currentId={config.defaultProfile} onSelect={setDefaultProfile} onClose={() => setShowProfiles(false)} />}
     </div>
   )
 }
 
 export default function App(): JSX.Element {
   return (
-    <ThemeProvider>
+    <ConfigProvider>
       <AppContent />
-    </ThemeProvider>
+    </ConfigProvider>
   )
 }

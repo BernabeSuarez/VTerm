@@ -95,7 +95,8 @@ body {
 }
 
 .tab-bar__new,
-.tab-bar__themes {
+.tab-bar__themes,
+.tab-bar__profiles {
   background: none;
   border: none;
   color: var(--ui-text-muted);
@@ -107,6 +108,7 @@ body {
 
 .tab-bar__new:hover,
 .tab-bar__themes:hover,
+.tab-bar__profiles:hover,
 .tab:hover {
   color: var(--ui-text);
 }
@@ -230,4 +232,50 @@ body {
 
 .theme-swatch--active {
   outline: 2px solid var(--ui-accent);
+}
+
+.profile-switcher__hint {
+  margin: -6px 0 12px;
+  font-size: 12px;
+  color: var(--ui-text-muted);
+}
+
+.profile-switcher__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.profile-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  padding: 10px;
+  background: none;
+  color: var(--ui-text);
+  cursor: pointer;
+}
+
+.profile-item:hover {
+  border-color: var(--ui-accent);
+}
+
+.profile-item--active {
+  outline: 2px solid var(--ui-accent);
+}
+
+.profile-item__name {
+  display: block;
+  font-size: 13px;
+}
+
+.profile-item__desc {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ui-text-muted);
 }

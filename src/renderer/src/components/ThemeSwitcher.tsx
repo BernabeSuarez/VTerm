@@ -1,7 +1,7 @@
-import { useTheme } from '../ThemeContext'
+import { useConfig } from '../ConfigContext'
 
 export function ThemeSwitcher({ onClose }: { onClose: () => void }): JSX.Element {
-  const { theme, setThemeById, allThemes } = useTheme()
+  const { theme, setThemeById, allThemes } = useConfig()
 
   return (
     <div className="theme-switcher__overlay" onClick={onClose}>

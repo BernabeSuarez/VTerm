@@ -1,8 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { AppConfig, ConfigPatch } from '../shared/app-config'
 
 const terminalAPI = {
-  spawn: (id: string, cols: number, rows: number, cwd?: string) =>
-    ipcRenderer.invoke('pty:spawn', { id, cols, rows, cwd }),
+  spawn: (id: string, cols: number, rows: number, cwd?: string, profileId?: string) =>
+    ipcRenderer.invoke('pty:spawn', { id, cols, rows, cwd, profile: profileId }),
+
+  listProfiles: () => ipcRenderer.invoke('profiles:list'),
+
+  loadConfig: (): Promise<AppConfig> => ipcRenderer.invoke('config:get'),
+
+  saveConfig: (patch: ConfigPatch): Promise<AppConfig> => ipcRenderer.invoke('config:set', patch),
 
   write: (id: string, data: string) => ipcRenderer.send('pty:write', { id, data }),
 

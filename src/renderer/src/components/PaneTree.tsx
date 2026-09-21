@@ -7,6 +7,7 @@ interface PaneTreeProps {
   tabActive: boolean
   anyClosable: boolean
   cwd?: string
+  profileId?: string
   onSplit: (paneId: string, direction: 'horizontal' | 'vertical') => void
   onClose: (paneId: string) => void
 }
@@ -15,7 +16,7 @@ interface GroupViewProps extends Omit<PaneTreeProps, 'root'> {
   group: GroupNode
 }
 
-export function PaneTree({ root, tabActive, anyClosable, cwd, onSplit, onClose }: PaneTreeProps): JSX.Element {
+export function PaneTree({ root, tabActive, anyClosable, cwd, profileId, onSplit, onClose }: PaneTreeProps): JSX.Element {
   if (root.type === 'pane') {
     return (
       <TerminalPane
@@ -24,15 +25,16 @@ export function PaneTree({ root, tabActive, anyClosable, cwd, onSplit, onClose }
         active={tabActive}
         closable={anyClosable}
         terminalCwd={cwd}
+        terminalProfile={profileId}
         onSplit={onSplit}
         onClose={onClose}
       />
     )
   }
-  return <GroupView group={root} tabActive={tabActive} anyClosable={anyClosable} cwd={cwd} onSplit={onSplit} onClose={onClose} />
+  return <GroupView group={root} tabActive={tabActive} anyClosable={anyClosable} cwd={cwd} profileId={profileId} onSplit={onSplit} onClose={onClose} />
 }
 
-function GroupView({ group, tabActive, anyClosable, cwd, onSplit, onClose }: GroupViewProps): JSX.Element {
+function GroupView({ group, tabActive, anyClosable, cwd, profileId, onSplit, onClose }: GroupViewProps): JSX.Element {
   const n = group.children.length
   return (
     <Group key={group.id} orientation={group.direction} id={group.id} className="pane-group">
@@ -46,11 +48,12 @@ function GroupView({ group, tabActive, anyClosable, cwd, onSplit, onClose }: Gro
                 active={tabActive}
                 closable={anyClosable}
                 terminalCwd={cwd}
+                terminalProfile={profileId}
                 onSplit={onSplit}
                 onClose={onClose}
               />
             ) : (
-              <GroupView key={child.id} group={child} tabActive={tabActive} anyClosable={anyClosable} cwd={cwd} onSplit={onSplit} onClose={onClose} />
+              <GroupView key={child.id} group={child} tabActive={tabActive} anyClosable={anyClosable} cwd={cwd} profileId={profileId} onSplit={onSplit} onClose={onClose} />
             )}
           </Panel>
         ]

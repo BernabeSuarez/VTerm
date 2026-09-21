@@ -23,9 +23,9 @@ Los instaladores quedan en `dist/`.
 
 - **`src/main/index.ts`** — proceso principal. Crea la ventana y gestiona los procesos `node-pty` (uno por pestaña), pasando su output al renderer vía IPC.
 - **`src/preload/index.ts`** — puente seguro entre el proceso principal y el renderer (`contextBridge`), expone `window.terminalAPI`.
-- **`src/renderer/src/components/Terminal.tsx`** — instancia xterm.js, lo conecta al pty correspondiente y aplica el tema activo.
+- **`src/renderer/src/components/Terminal.tsx`** — instancia xterm.js, lo conecta al pty correspondiente y aplica el tema y la fuente activas.
 - **`src/renderer/src/themes/index.ts`** — catálogo de temas (colores de xterm.js + colores del chrome de la UI).
-- **`src/renderer/src/ThemeContext.tsx`** — estado global del tema activo, persistido en `localStorage`.
+- **`src/renderer/src/ConfigContext.tsx`** — estado global de la configuración (tema, fuente, tamaño, perfil de shell), cargada desde el archivo de config.
 
 ## Agregar un tema nuevo
 
@@ -34,6 +34,34 @@ Sumá un objeto al array `themes` en `src/renderer/src/themes/index.ts` con:
 - `ui`: los colores del chrome (tabs, bordes, fondo de la ventana)
 
 Aparece automáticamente en el selector de temas (🎨).
+
+## Perfiles de shell
+
+La barra de pestañas tiene un botón **Shell** que permite elegir el shell por defecto para las pestañas nuevas.
+
+Los perfiles disponibles dependen de la plataforma y de lo que esté instalado (se detectan automáticamente):
+
+- **Predeterminado** — detecta el shell del sistema (`$SHELL` en macOS/Linux, `powershell.exe` en Windows).
+- **Bash** — Bash del sistema o Git Bash en Windows.
+- **Zsh** — el shell por defecto de macOS.
+- **Fish** — si está instalado (`/usr/local/bin/fish`, `/opt/homebrew/bin/fish` o en el `PATH`).
+- **PowerShell** — Windows PowerShell o PowerShell Core (`pwsh`).
+- **WSL** — subsistema de Windows para Linux (solo Windows).
+
+El perfil elegido se persiste en el archivo de config y se usa para cada pestaña nueva (o carpeta abierta desde "Abrir en VTerm"). Cada pestaña conserva el perfil con el que se creó.
+
+La detección y resolución de shells vive en `src/main/profiles.ts`; `pty:spawn` recibe el `profile` elegido y el renderer solo muestra los perfiles que el proceso principal reporta como disponibles (IPC `profiles:list`).
+
+## Configuración persistente
+
+Toda la configuración (tema, fuente, tamaño de letra y perfil de shell) vive en un único archivo **`config.json`** dentro del directorio de datos de la app (`app.getPath('userData')`, es decir `~/Library/Application Support/VTerm` en macOS, `%APPDATA%\VTerm` en Windows y `~/.config/VTerm` en Linux). No se usa `localStorage`.
+
+- El proceso principal (`src/main/config.ts`) lee/mergea/guarda el archivo (`config:get` / `config:set`).
+- El renderer carga la config vía `window.terminalAPI.loadConfig()` al arrancar (vía `src/renderer/src/ConfigContext.tsx`) y **no renderiza las pestañas hasta tenerla**, para que el tema, la fuente y el perfil guardados se apliquen desde el primer arranque.
+- Cambiar de tema o de perfil llama a `saveConfig(patch)`, que fusiona el cambio y devuelve la config completa resultante como fuente de verdad.
+- El tamaño de letra se ajusta con **A+ / A−** en la barra de cada panel y se persiste igual.
+
+Tipos compartidos entre main y renderer en `src/shared/app-config.ts`; si falta el archivo o hay un campo inválido, se usa el default configurado.
 
 ## Integración con el sistema operativo
 
@@ -69,9 +97,9 @@ La integración de Finder usa el mecanismo nativo `NSServices` (declarado en `el
 
 - [ ] Atajos de teclado (Cmd/Ctrl+T nueva pestaña, Cmd/Ctrl+W cerrar, Cmd/Ctrl+1..9 saltar a pestaña)
 - [ ] Splits (dividir el panel horizontal/verticalmente)
-- [ ] Perfiles de shell configurables (bash, zsh, fish, PowerShell, WSL)
+- [x] Perfiles de shell configurables (bash, zsh, fish, PowerShell, WSL)
 - [ ] Buscar dentro del scrollback (`xterm-addon-search` ya está instalado)
-- [ ] Persistir configuración (fuente, tamaño, tema) en un archivo de config en vez de solo `localStorage`
+- [x] Persistir configuración (fuente, tamaño, tema) en un archivo de config en vez de solo `localStorage`
 - [ ] Auto-actualización (`electron-updater`)
 
 ## Notas de rendimiento
