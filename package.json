@@ -1,9 +1,10 @@
 {
-  "name": "terminal-app",
-  "version": "0.1.0",
-  "description": "Terminal multiplataforma construida con Electron + Vite + React + xterm.js",
+  "name": "vterm",
+  "productName": "VTerm",
+  "version": "1.0.0",
+  "description": "VTerm es una terminal moderna, rápida y multiplataforma para Windows, macOS y Linux.",
   "main": "./out/main/index.js",
-  "author": "Bernabe",
+  "author": "Veddev Desarrollos",
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
