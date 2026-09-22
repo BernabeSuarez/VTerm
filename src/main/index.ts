@@ -7,6 +7,7 @@ import { loadConfig, saveConfig } from './config'
 import { installLinuxIntegration } from './linux-integration'
 import { installMacServices } from './platform/darwin'
 import { installWindowsIntegration } from './platform/win32'
+import { installApplicationMenu } from './menu'
 import { resolveProfile, listAvailableProfiles } from './profiles'
 import { vtermLog } from './log'
 
@@ -149,6 +150,7 @@ if (!gotSingleInstanceLock) {
 }
 
 app.whenReady().then(() => {
+  installApplicationMenu()
   setDevIcons()
   createWindow()
 

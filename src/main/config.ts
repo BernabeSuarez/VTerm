@@ -4,7 +4,7 @@ import { dirname, join } from 'path'
 import type { AppConfig, ConfigPatch } from '../shared/app-config'
 
 export const DEFAULT_CONFIG: AppConfig = {
-  themeId: 'tokyo-night',
+  themeId: 'one-dark-pro',
   defaultProfile: 'default',
   font: {
     family: 'Cascadia Code, Menlo, Consolas, "SF Mono", monospace',
@@ -12,7 +12,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     weight: 400,
     weightBold: 700,
     cursorBlink: true
-  }
+  },
+  keymaps: {}
 }
 
 function configPath(): string {
@@ -26,7 +27,8 @@ export function loadConfig(): AppConfig {
     return {
       ...DEFAULT_CONFIG,
       ...parsed,
-      font: { ...DEFAULT_CONFIG.font, ...(parsed.font ?? {}) }
+      font: { ...DEFAULT_CONFIG.font, ...(parsed.font ?? {}) },
+      keymaps: { ...DEFAULT_CONFIG.keymaps, ...(parsed.keymaps ?? {}) }
     }
   } catch {
     return { ...DEFAULT_CONFIG }
@@ -38,7 +40,8 @@ export function saveConfig(patch: ConfigPatch): AppConfig {
   const next: AppConfig = {
     ...current,
     ...patch,
-    font: { ...current.font, ...(patch.font ?? {}) }
+    font: { ...current.font, ...(patch.font ?? {}) },
+    keymaps: { ...current.keymaps, ...(patch.keymaps ?? {}) }
   }
   const file = configPath()
   mkdirSync(dirname(file), { recursive: true })

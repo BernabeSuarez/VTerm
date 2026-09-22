@@ -3,7 +3,7 @@ import type { AppConfig, ConfigPatch } from '../../shared/app-config'
 import { themes, type AppTheme } from './themes'
 
 const FALLBACK_CONFIG: AppConfig = {
-  themeId: 'tokyo-night',
+  themeId: 'one-dark-pro',
   defaultProfile: 'default',
   font: {
     family: 'Cascadia Code, Menlo, Consolas, "SF Mono", monospace',
@@ -11,7 +11,8 @@ const FALLBACK_CONFIG: AppConfig = {
     weight: 400,
     weightBold: 700,
     cursorBlink: true
-  }
+  },
+  keymaps: {}
 }
 
 interface ConfigContextValue {
@@ -22,6 +23,7 @@ interface ConfigContextValue {
   setThemeById: (id: string) => void
   setDefaultProfile: (id: string) => void
   updateFont: (patch: Partial<AppConfig['font']>) => void
+  updateKeymaps: (patch: Record<string, string>) => void
 }
 
 const ConfigContext = createContext<ConfigContextValue | null>(null)
@@ -88,9 +90,16 @@ export function ConfigProvider({ children }: { children: React.ReactNode }): JSX
     [patchConfig]
   )
 
+  const updateKeymaps = useCallback(
+    (patch: Record<string, string>): void => {
+      patchConfig({ keymaps: patch })
+    },
+    [patchConfig]
+  )
+
   return (
     <ConfigContext.Provider
-      value={{ config, loaded, theme, allThemes: themes, setThemeById, setDefaultProfile, updateFont }}
+      value={{ config, loaded, theme, allThemes: themes, setThemeById, setDefaultProfile, updateFont, updateKeymaps }}
     >
       {children}
     </ConfigContext.Provider>

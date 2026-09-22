@@ -1,10 +1,10 @@
 :root {
-  --ui-background: #16161e;
-  --ui-surface: #1a1b26;
-  --ui-border: #292e42;
-  --ui-text: #c0caf5;
-  --ui-text-muted: #565f89;
-  --ui-accent: #7aa2f7;
+  --ui-background: #21252b;
+  --ui-surface: #282c34;
+  --ui-border: #3e4451;
+  --ui-text: #abb2bf;
+  --ui-text-muted: #7f848e;
+  --ui-accent: #61afef;
 }
 
 * {
@@ -94,9 +94,7 @@ body {
   padding: 0 2px;
 }
 
-.tab-bar__new,
-.tab-bar__themes,
-.tab-bar__profiles {
+.tab-bar__new {
   background: none;
   border: none;
   color: var(--ui-text-muted);
@@ -107,10 +105,62 @@ body {
 }
 
 .tab-bar__new:hover,
-.tab-bar__themes:hover,
-.tab-bar__profiles:hover,
 .tab:hover {
   color: var(--ui-text);
+}
+
+.tab-bar__menu {
+  position: relative;
+  margin-right: 8px;
+  -webkit-app-region: no-drag;
+}
+
+.tab-bar__menu-trigger {
+  background: none;
+  border: none;
+  color: var(--ui-text-muted);
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 18px;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.tab-bar__menu-trigger:hover,
+.tab-bar__menu-trigger[aria-expanded="true"] {
+  color: var(--ui-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tab-bar__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 8px;
+  padding: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.tab-bar__dropdown button {
+  background: none;
+  border: none;
+  color: var(--ui-text);
+  cursor: pointer;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  border-radius: 5px;
+}
+
+.tab-bar__dropdown button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--ui-accent);
 }
 
 .app__terminals {
@@ -151,6 +201,63 @@ body {
 
 .pane-frame {
   position: relative;
+}
+
+.search-bar {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--ui-surface);
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  padding: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.search-bar input {
+  background: var(--ui-background);
+  border: none;
+  color: var(--ui-text);
+  padding: 4px 8px;
+  font-size: 12px;
+  width: 170px;
+  outline: none;
+  border-radius: 4px;
+}
+
+.search-bar input::placeholder {
+  color: var(--ui-text-muted);
+}
+
+.search-bar__count {
+  font-size: 11px;
+  color: var(--ui-text-muted);
+  min-width: 34px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.search-bar button {
+  background: none;
+  border: none;
+  color: var(--ui-text);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 4px 7px;
+  border-radius: 4px;
+}
+
+.search-bar button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.search-bar button.search-bar__toggle--on {
+  color: var(--ui-accent);
 }
 
 .pane-toolbar {
@@ -278,4 +385,65 @@ body {
   margin-top: 2px;
   font-size: 12px;
   color: var(--ui-text-muted);
+}
+
+.shortcuts-list {
+  width: 440px;
+  max-height: 78vh;
+  overflow-y: auto;
+}
+
+.shortcuts-group {
+  margin-bottom: 14px;
+}
+
+.shortcuts-group h4 {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ui-text-muted);
+}
+
+.shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--ui-border);
+}
+
+.shortcut-row:last-child {
+  border-bottom: none;
+}
+
+.shortcut-row__name {
+  color: var(--ui-text);
+}
+
+.shortcut-row__keys {
+  font-family: "Cascadia Code", Menlo, Consolas, monospace;
+  font-size: 12px;
+  color: var(--ui-accent);
+  white-space: nowrap;
+}
+
+.shortcuts-list__hint {
+  margin: 14px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ui-text-muted);
+}
+
+.shortcuts-list__hint code,
+.shortcuts-list__hint kbd {
+  font-family: "Cascadia Code", Menlo, Consolas, monospace;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: var(--ui-text);
 }

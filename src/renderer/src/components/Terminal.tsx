@@ -1,11 +1,19 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { SearchAddon } from "@xterm/addon-search";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useConfig } from "../ConfigContext";
+import { makeKeyHandler } from "../commands";
+import { SearchBar } from "./SearchBar";
 // El bundler procesa la hoja de estilos como un efecto secundario.
 import "@xterm/xterm/css/xterm.css";
+
+interface SearchResults {
+  current: number;
+  total: number;
+}
 
 interface TerminalPaneProps {
   /** id único de esta pestaña/sesión, usado para el canal IPC */
@@ -34,11 +42,117 @@ export function TerminalPane({
   const containerRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const searchAddonRef = useRef<SearchAddon | null>(null);
   const onSplitRef = useRef(onSplit);
   const onCloseRef = useRef(onClose);
   onSplitRef.current = onSplit;
   onCloseRef.current = onClose;
   const { theme, config, updateFont } = useConfig();
+
+  const configRef = useRef(config);
+  configRef.current = config;
+  const closableRef = useRef(closable);
+  closableRef.current = closable;
+  const queryRef = useRef("");
+  const caseSensitiveRef = useRef(false);
+  const searchOpenRef = useRef(false);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [caseSensitive, setCaseSensitive] = useState(false);
+  const [searchResults, setSearchResults] = useState<SearchResults | null>(null);
+
+  queryRef.current = query;
+  caseSensitiveRef.current = caseSensitive;
+  searchOpenRef.current = searchOpen;
+
+  const openSearch = (): void => {
+    searchAddonRef.current?.clearDecorations();
+    setQuery("");
+    setSearchResults(null);
+    setSearchOpen(true);
+  };
+
+  const closeSearch = (): void => {
+    setSearchOpen(false);
+    setQuery("");
+    setSearchResults(null);
+    searchAddonRef.current?.clearDecorations();
+    xtermRef.current?.focus();
+  };
+
+  const runSearch = (text: string, direction: "next" | "prev"): void => {
+    const addon = searchAddonRef.current;
+    if (!addon) return;
+    if (!text) {
+      addon.clearDecorations();
+      setSearchResults(null);
+      return;
+    }
+    const options = {
+      caseSensitive: caseSensitiveRef.current,
+      decorations: {
+        matchOverviewRuler: theme.terminal.selectionBackground as string,
+        activeMatchBackground: theme.terminal.cursor as string,
+        activeMatchColorOverviewRuler: theme.terminal.cursor as string
+      }
+    };
+    try {
+      if (direction === "prev") addon.findPrevious(text, options);
+      else addon.findNext(text, options);
+    } catch {
+      // Si el renderer no soporta decorations, se reintenta sin ellas.
+      try {
+        if (direction === "prev") addon.findPrevious(text);
+        else addon.findNext(text);
+      } catch {
+        // sin match decorado: no-op
+      }
+    }
+  };
+
+  const searchNext = (): void => runSearch(queryRef.current, "next");
+  const searchPrev = (): void => runSearch(queryRef.current, "prev");
+
+  const handleQueryChange = (value: string): void => {
+    setQuery(value);
+    runSearch(value, "next");
+  };
+
+  const toggleCaseSensitive = (): void => {
+    const next = !caseSensitiveRef.current;
+    caseSensitiveRef.current = next;
+    setCaseSensitive(next);
+    runSearch(queryRef.current, "next");
+  };
+
+  const updateFontSize = (delta: number): void => {
+    const size = configRef.current.font.size;
+    const next = delta === 0 ? 14 : Math.max(8, Math.min(28, size + delta));
+    updateFont({ size: next });
+  };
+
+  // Keymaps de este panel: los comandos que involucran a una terminal concreta
+  // (pane:, editor:, zoom:) se resuelven acá, en el panel enfocado.
+  const keyHandlerRef = useRef<(e: KeyboardEvent) => boolean>(() => false);
+  useEffect(() => {
+    keyHandlerRef.current = makeKeyHandler(configRef.current.keymaps, {
+      "pane:splitRight": () => onSplitRef.current(id, "horizontal"),
+      "pane:splitDown": () => onSplitRef.current(id, "vertical"),
+      "pane:close": () => {
+        if (closableRef.current) onCloseRef.current(id);
+      },
+      "editor:search": () => {
+        if (searchOpenRef.current) closeSearch();
+        else openSearch();
+      },
+      "editor:clearBuffer": () => xtermRef.current?.clear(),
+      "zoom:in": () => updateFontSize(1),
+      "zoom:out": () => updateFontSize(-1),
+      "zoom:reset": () => updateFontSize(0)
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.keymaps, closable]);
 
   // Crear la instancia de xterm.js y el proceso pty asociado (una sola vez)
   useEffect(() => {
@@ -58,10 +172,25 @@ export function TerminalPane({
     xterm.loadAddon(fitAddon);
     xterm.loadAddon(new WebLinksAddon());
 
+    const searchAddon = new SearchAddon();
+    xterm.loadAddon(searchAddon);
+    searchAddonRef.current = searchAddon;
+
     xterm.open(containerRef.current);
 
     xtermRef.current = xterm;
     fitAddonRef.current = fitAddon;
+
+    // Atajos: se resuelven contra los keymaps efectivos del panel. Si un
+    // atajo coincide, se traga la tecla para que no llegue al pty.
+    xterm.attachCustomKeyEventHandler((e) => {
+      if (keyHandlerRef.current(e)) return false;
+      if (searchOpenRef.current && e.key === "Escape") {
+        closeSearch();
+        return false;
+      }
+      return true;
+    });
 
     // Registro de IPC: se hace de forma síncrona, sin depender del renderer.
     const unsubscribeData = window.terminalAPI.onData(id, (data) =>
@@ -73,6 +202,11 @@ export function TerminalPane({
 
     const disposableInput = xterm.onData((data) =>
       window.terminalAPI.write(id, data),
+    );
+    const disposableResults = searchAddon.onDidChangeResults(
+      ({ resultIndex, resultCount }) => {
+        setSearchResults({ current: resultIndex, total: resultCount });
+      },
     );
 
     window.terminalAPI.spawn(id, xterm.cols, xterm.rows, terminalCwd, terminalProfile);
@@ -117,23 +251,6 @@ export function TerminalPane({
     const resizeObserver = new ResizeObserver(handleResize);
     resizeObserver.observe(containerRef.current);
 
-    const isMac = /mac/i.test(navigator.platform || "");
-    const handleCustomKey = (event: KeyboardEvent): boolean => {
-      if (event.type !== "keydown") return true;
-      const modifier = isMac ? event.metaKey : event.ctrlKey;
-      const key = event.key.toLowerCase();
-      if (modifier && event.shiftKey && key === "d") {
-        onSplitRef.current(id, "horizontal");
-        return false;
-      }
-      if (modifier && event.shiftKey && key === "e") {
-        onSplitRef.current(id, "vertical");
-        return false;
-      }
-      return true;
-    };
-    xterm.attachCustomKeyEventHandler(handleCustomKey);
-
     xterm.focus();
 
     return () => {
@@ -142,8 +259,10 @@ export function TerminalPane({
       unsubscribeData();
       unsubscribeExit();
       disposableInput.dispose();
+      disposableResults.dispose();
       window.removeEventListener("resize", handleResize);
       resizeObserver.disconnect();
+      searchAddonRef.current = null;
       xterm.dispose();
     };
     // Solo se recrea si cambia el id de la pestaña.
@@ -198,6 +317,19 @@ export function TerminalPane({
         ref={containerRef}
         style={{ width: "100%", height: "100%", padding: "8px" }}
       />
+      {searchOpen && (
+        <SearchBar
+          open={searchOpen}
+          query={query}
+          caseSensitive={caseSensitive}
+          results={searchResults}
+          onQueryChange={handleQueryChange}
+          onCaseSensitiveChange={toggleCaseSensitive}
+          onNext={searchNext}
+          onPrev={searchPrev}
+          onClose={closeSearch}
+        />
+      )}
       <div className="pane-toolbar">
         <button
           onClick={() => updateFont({ size: Math.min(config.font.size + 1, 28) })}
