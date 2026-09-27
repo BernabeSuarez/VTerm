@@ -51,6 +51,7 @@ export function defaultKeymaps(platform: PlatformName): Record<string, string> {
     'zoom:in': `${mod}+=`,
     'zoom:out': `${mod}+-`,
     'zoom:reset': `${mod}+0`,
+    'view:palette': `${mod}+shift+p`,
     'view:themes': `${mod}+,`,
     'view:shortcuts': `${mod}+/`
   }

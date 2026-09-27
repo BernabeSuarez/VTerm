@@ -5,106 +5,86 @@ import { TabBar } from './components/TabBar'
 import { ThemeSwitcher } from './components/ThemeSwitcher'
 import { ProfileSwitcher } from './components/ProfileSwitcher'
 import { ShortcutsSwitcher } from './components/ShortcutsSwitcher'
-import { makeKeyHandler } from './commands'
-import {
-  createRootPane,
-  collectPaneIds,
-  countPanes,
-  removePane,
-  splitNode,
-  type TreeNode
-} from './paneTree'
-
-interface Tab {
-  id: string
-  title: string
-  root: TreeNode
-  cwd?: string
-  profileId: string
-}
-
-function createTabId(): string {
-  return `tab-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-}
-
-function folderLabel(cwd?: string): string {
-  if (!cwd) return 'Terminal'
-  const base = cwd.split(/[/\\]/).filter(Boolean).pop()
-  return base || cwd
-}
+import { Notification } from './components/Notification'
+import { CommandPalette } from './components/CommandPalette'
+import { makeKeyHandler, isTypingInTerminalInput } from './commands'
+import { useTerminalManager } from './hooks/useTerminalManager'
+import { TerminalService } from './services/TerminalService'
+import { countPanes } from './paneTree'
 
 function AppContent(): JSX.Element {
   const { config, loaded, setDefaultProfile } = useConfig()
-  const [tabs, setTabs] = useState<Tab[]>([])
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const {
+    tabs,
+    activeId,
+    setActiveId,
+    addTab,
+    closeTab,
+    cycleTab,
+    handleSplit,
+    handleClosePane,
+    jumpToTab,
+    jumpToLastTab,
+    initialize
+  } = useTerminalManager(config.defaultProfile)
+
   const [showThemes, setShowThemes] = useState(false)
   const [showProfiles, setShowProfiles] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
-  const tabsRef = useRef(tabs)
-  tabsRef.current = tabs
+  const [showPalette, setShowPalette] = useState(false)
+  const [notifications, setNotifications] = useState<{ id: string; type: 'error' | 'info'; message: string }[]>([])
+
   const configRef = useRef(config)
   configRef.current = config
-  const activeIdRef = useRef<string | null>(null)
+
   const closeModalsRef = useRef<() => void>(() => {})
   closeModalsRef.current = () => {
     setShowThemes(false)
     setShowProfiles(false)
     setShowShortcuts(false)
+    setShowPalette(false)
   }
   const modalsOpenRef = useRef(false)
 
-  function createTab(cwd?: string): Tab {
-    const title = cwd ? folderLabel(cwd) : `Terminal ${tabsRef.current.length + 1}`
-    return { id: createTabId(), title, root: createRootPane(), cwd, profileId: configRef.current.defaultProfile }
-  }
-
-  // La primera pestaña se crea recién cuando la config está cargada, para que
-  // herede el tema, la fuente y el perfil guardados.
   useEffect(() => {
-    if (!loaded || tabsRef.current.length > 0) return
-    const tab = createTab()
-    setTabs([tab])
-    setActiveId(tab.id)
+    const unsubscribe = TerminalService.onNotify((n) => {
+      const id = Math.random().toString(36).slice(2, 9)
+      setNotifications((prev) => [...prev, { ...n, id }])
+      setTimeout(() => {
+        setNotifications((prev) => prev.filter((item) => item.id !== id))
+      }, 5000)
+    })
+    return unsubscribe
+  }, [])
+
+  // Primera pestaña al cargar config
+  useEffect(() => {
+    if (!loaded || tabs.length > 0) return
+    addTab()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded])
+  }, [loaded, addTab, tabs.length])
 
   useEffect(() => {
     const unsubscribe = window.terminalAPI.onOpenFolder((paths) => {
-      const queue = paths.map((p) => createTab(p))
-      setTabs((prev) => [...prev, ...queue])
-      if (queue.length > 0) setActiveId(queue[queue.length - 1].id)
+      paths.forEach(p => addTab(p))
     })
     return unsubscribe
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [addTab])
 
   const currentActive = activeId ?? tabs[0]?.id
-  activeIdRef.current = currentActive
 
-  // --- Atajos de teclado globales (comandos de tipo tab: y view:) ---
-  // Los comandos de panel y de terminal (pane:, editor:, zoom:) los maneja
-  // cada TerminalPane al estar enfocado. Acá se resuelven solo los que
-  // involucran a la app entera. La captura en fase de captura garantiza que
-  // la combinación no llegue al pty (xterm.js la procesa después).
+  // --- Atajos de teclado globales ---
   const tabActionsRef = useRef((): Record<string, () => void> => ({}))
   tabActionsRef.current = () => ({
-    'tab:new': () => {
-      const tab = createTab()
-      setTabs((prev) => [...prev, tab])
-      setActiveId(tab.id)
-    },
+    'tab:new': () => addTab(),
     'tab:close': () => {
-      const list = tabsRef.current
-      if (list.length <= 1) return
-      const id = activeIdRef.current ?? list[0].id
-      const tab = list.find((t) => t.id === id)
-      const next = list.filter((t) => t.id !== id)
-      setTabs(next)
-      if (tab) collectPaneIds(tab.root).forEach((pid) => window.terminalAPI.kill(pid))
-      setActiveId(next[next.length - 1].id)
+      if (tabs.length <= 1) return
+      closeTab(currentActive || tabs[0].id)
     },
     'tab:prev': () => cycleTab(-1),
     'tab:next': () => cycleTab(1),
+    'view:palette': () => setShowPalette((v) => !v),
     'view:themes': () => {
       setShowProfiles(false)
       setShowShortcuts(false)
@@ -123,24 +103,33 @@ function AppContent(): JSX.Element {
     ...tabJumpHandlers()
   })
 
+  function tabJumpHandlers(): Record<string, () => void> {
+    const handlers: Record<string, () => void> = {}
+    for (let i = 1; i <= 8; i++) {
+      handlers[`tab:jump:${i}`] = () => jumpToTab(i - 1)
+    }
+    handlers['tab:jump:last'] = () => jumpToLastTab()
+    return handlers
+  }
+
   const keyHandlerRef = useRef<(e: KeyboardEvent) => boolean>(() => false)
   useEffect(() => {
     keyHandlerRef.current = makeKeyHandler(configRef.current.keymaps, () => tabActionsRef.current(), true)
   }, [config.keymaps])
 
   useEffect(() => {
-    modalsOpenRef.current = showThemes || showProfiles || showShortcuts
-  }, [showThemes, showProfiles, showShortcuts])
+    modalsOpenRef.current = showThemes || showProfiles || showShortcuts || showPalette
+  }, [showThemes, showProfiles, showShortcuts, showPalette])
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent): void => {
-      if ((e.target as HTMLElement)?.hasAttribute?.('data-vterm-input')) return
       if (modalsOpenRef.current && e.key === 'Escape') {
         closeModalsRef.current()
         e.preventDefault()
         e.stopPropagation()
         return
       }
+      if (isTypingInTerminalInput(e)) return
       if (keyHandlerRef.current(e)) {
         e.preventDefault()
         e.stopPropagation()
@@ -150,78 +139,7 @@ function AppContent(): JSX.Element {
     return () => window.removeEventListener('keydown', onKeyDown, true)
   }, [])
 
-  function cycleTab(delta: number): void {
-    const list = tabsRef.current
-    if (list.length === 0) return
-    const idx = Math.max(0, list.findIndex((t) => t.id === activeIdRef.current))
-    const next = list[(idx + delta + list.length) % list.length]
-    setActiveId(next.id)
-  }
-
-  function tabJumpHandlers(): Record<string, () => void> {
-    const handlers: Record<string, () => void> = {}
-    for (let i = 1; i <= 8; i++) {
-      handlers[`tab:jump:${i}`] = () => {
-        const target = tabsRef.current[i - 1]
-        if (target) setActiveId(target.id)
-      }
-    }
-    handlers['tab:jump:last'] = () => {
-      const list = tabsRef.current
-      const target = list[list.length - 1]
-      if (target) setActiveId(target.id)
-    }
-    return handlers
-  }
-
   if (!loaded || tabs.length === 0) return <div className="app" />
-
-  const mutateTabRoot = (tabId: string, transform: (root: TreeNode) => TreeNode | null): void => {
-    const prev = tabsRef.current
-    const tab = prev.find((t) => t.id === tabId)
-    if (!tab) return
-    const oldIds = collectPaneIds(tab.root)
-    const nextRoot = transform(tab.root)
-    if (!nextRoot) return
-    const nextTabs = prev.map((t) => (t.id === tabId ? { ...t, root: nextRoot } : t))
-    setTabs(nextTabs)
-    const newIds = collectPaneIds(nextRoot)
-    oldIds.filter((id) => !newIds.includes(id)).forEach((id) => window.terminalAPI.kill(id))
-  }
-
-  const findTabWithPane = (paneId: string): Tab | undefined =>
-    tabsRef.current.find((t) => collectPaneIds(t.root).includes(paneId))
-
-  const handleSplit = (paneId: string, direction: 'horizontal' | 'vertical'): void => {
-    const tab = findTabWithPane(paneId)
-    if (!tab) return
-    mutateTabRoot(tab.id, (root) => splitNode(root, paneId, direction))
-  }
-
-  const handleClosePane = (paneId: string): void => {
-    const tab = findTabWithPane(paneId)
-    if (!tab) return
-    mutateTabRoot(tab.id, (root) => {
-      const next = removePane(root, paneId)
-      return next ? next : root
-    })
-  }
-
-  const addTab = (): void => {
-    const tab = createTab()
-    setTabs((prev) => [...prev, tab])
-    setActiveId(tab.id)
-  }
-
-  const closeTab = (id: string): void => {
-    const prev = tabsRef.current
-    if (prev.length <= 1) return
-    const tab = prev.find((t) => t.id === id)
-    const next = prev.filter((t) => t.id !== id)
-    setTabs(next)
-    if (tab) collectPaneIds(tab.root).forEach((pid) => window.terminalAPI.kill(pid))
-    if (id === currentActive) setActiveId(next[next.length - 1].id)
-  }
 
   return (
     <div className="app">
@@ -240,23 +158,47 @@ function AppContent(): JSX.Element {
           <div
             key={tab.id}
             className="tab-workspace"
-            style={{ display: tab.id === currentActive ? 'block' : 'none', width: '100%', height: '100%' }}
+            style={{
+              display: tab.id === currentActive ? 'block' : 'none',
+              width: '100%',
+              height: '100%',
+              visibility: tab.id === currentActive ? 'visible' : 'hidden'
+            }}
           >
-            <PaneTree
-              root={tab.root}
-              tabActive={tab.id === currentActive}
-              anyClosable={countPanes(tab.root) > 1}
-              cwd={tab.cwd}
-              profileId={tab.profileId}
-              onSplit={handleSplit}
-              onClose={handleClosePane}
-            />
+            {tab.id === currentActive && (
+              <PaneTree
+                root={tab.root}
+                tabActive={tab.id === currentActive}
+                anyClosable={countPanes(tab.root) > 1}
+                cwd={tab.cwd}
+                profileId={tab.profileId}
+                onSplit={handleSplit}
+                onClose={handleClosePane}
+              />
+            )}
           </div>
         ))}
       </div>
       {showThemes && <ThemeSwitcher onClose={() => setShowThemes(false)} />}
       {showProfiles && <ProfileSwitcher currentId={config.defaultProfile} onSelect={setDefaultProfile} onClose={() => setShowProfiles(false)} />}
       {showShortcuts && <ShortcutsSwitcher onClose={() => setShowShortcuts(false)} />}
+      {showPalette && (
+        <CommandPalette
+          open={showPalette}
+          onClose={() => setShowPalette(false)}
+          commands={[
+            { id: 'tab-new', label: 'Nueva pestaña', description: 'Abre una nueva instancia de terminal', category: 'TABS', action: () => addTab() },
+            { id: 'tab-close', label: 'Cerrar pestaña', description: 'Cierra la pestaña actual', category: 'TABS', action: () => closeTab(currentActive || tabs[0].id) },
+            { id: 'view-themes', label: 'Cambiar Tema', description: 'Abre el selector de temas visuales', category: 'VIEW', action: () => setShowThemes(true) },
+            { id: 'view-profiles', label: 'Cambiar Perfil', description: 'Cambia el shell predeterminado', category: 'VIEW', action: () => setShowProfiles(true) },
+            { id: 'view-shortcuts', label: 'Ver Atajos', description: 'Muestra la lista de comandos de teclado', category: 'VIEW', action: () => setShowShortcuts(true) },
+          ]}
+        />
+      )}
+      <Notification
+        notifications={notifications}
+        onClose={(id) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
+      />
     </div>
   )
 }

@@ -36,6 +36,13 @@ const terminalAPI = {
       callback(payload.paths)
     ipcRenderer.on('app:open-folder', listener)
     return () => ipcRenderer.removeListener('app:open-folder', listener)
+  },
+
+  onNotify: (callback: (notification: { type: 'error' | 'info'; message: string }) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, notification: { type: 'error' | 'info'; message: string }) =>
+      callback(notification)
+    ipcRenderer.on('app:notify', listener)
+    return () => ipcRenderer.removeListener('app:notify', listener)
   }
 }
 

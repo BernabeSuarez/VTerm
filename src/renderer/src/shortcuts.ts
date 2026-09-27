@@ -61,6 +61,7 @@ export const SHORTCUTS_GROUPS: ShortcutGroup[] = [
     id: 'vista',
     label: 'Vista',
     commands: [
+      { id: 'view:palette', label: 'Abrir paleta de comandos' },
       { id: 'view:themes', label: 'Cambiar tema' },
       { id: 'view:profiles', label: 'Cambiar shell por defecto' },
       { id: 'view:shortcuts', label: 'Ver atajos de teclado' }

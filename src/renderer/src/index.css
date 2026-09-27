@@ -1,3 +1,49 @@
+@tailwind utilities;
+
+/* Las utilidades de Tailwind solo se usan en componentes nuevos (paleta de
+   comandos, notificaciones). Las animaciones que usan esos componentes
+   venían del plugin `tailwindcss-animate`, que no se quiere añadir como
+   dependencia, así que se definen acá a mano. */
+@keyframes palette-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes notification-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-in {
+  animation-duration: 150ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.animate-in.fade-in {
+  animation-name: palette-in;
+}
+
+.animate-in.zoom-in-95 {
+  animation-name: palette-in;
+}
+
+.animate-in.slide-in-from-right-4 {
+  animation-name: notification-in;
+}
+
 :root {
   --ui-background: #21252b;
   --ui-surface: #282c34;

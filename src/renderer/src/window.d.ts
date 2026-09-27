@@ -13,6 +13,7 @@ declare global {
       onData: (id: string, callback: (data: string) => void) => () => void
       onExit: (id: string, callback: () => void) => () => void
       onOpenFolder: (callback: (paths: string[]) => void) => () => void
+      onNotify: (callback: (notification: { type: 'error' | 'info'; message: string }) => void) => () => void
     }
   }
 }

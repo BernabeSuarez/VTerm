@@ -1,7 +1,7 @@
 {
   "name": "vterm",
   "productName": "VTerm",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "VTerm es una terminal moderna, rápida y multiplataforma para Windows, macOS y Linux.",
   "main": "./out/main/index.js",
   "author": "Veddev Desarrollos",
@@ -27,14 +27,15 @@
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/addon-webgl": "^0.18.0",
     "@xterm/xterm": "^5.5.0",
+    "lucide-react": "^1.48.0",
     "node-pty": "^1.0.0",
     "react-resizable-panels": "^4.12.4"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
-    "@electron/rebuild": "^3.6.0",
     "autoprefixer": "^10.4.20",
     "electron": "^31.4.0",
     "electron-builder": "^24.13.3",

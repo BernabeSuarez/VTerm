@@ -178,6 +178,14 @@ export function TerminalPane({
 
     xterm.open(containerRef.current);
 
+    // xterm crea un <textarea> auxiliar invisible donde aterriza la escritura.
+    // Se marca como input de escritura para que un comando reasignado a una
+    // tecla suelta no se dispare al escribir; los atajos con modificador
+    // (cmd/ctrl/alt) siguen funcionando desde adentro de la terminal.
+    containerRef.current
+      ?.querySelector<HTMLTextAreaElement>('.xterm-helper-textarea')
+      ?.setAttribute('data-vterm-input', '');
+
     xtermRef.current = xterm;
     fitAddonRef.current = fitAddon;
 

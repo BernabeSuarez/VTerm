@@ -31,7 +31,7 @@ function pathExists(p: string): boolean {
   }
 }
 
-function which(bin: string): string | null {
+export function which(bin: string): string | null {
   const sep = isWindows ? ';' : ':'
   const paths = (process.env.PATH || '').split(sep).filter(Boolean)
   for (const dir of paths) {

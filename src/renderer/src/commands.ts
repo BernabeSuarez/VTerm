@@ -3,6 +3,20 @@ import { effectiveKeymaps, detectPlatform, matchesKeyEvent, parseAccelerator } f
 export type CommandHandlers = Record<string, (e: KeyboardEvent) => void>
 
 /**
+ * true cuando la tecla viene de un input de escritura (el textarea auxiliar de
+ * xterm o la barra de búsqueda, ambos marcados con `data-vterm-input`) y sin
+ * modificador. Sólo se frenan las teclas sueltas: un comando reasignado a una
+ * tecla sin modificador no debe dispararse mientras el usuario escribe, pero
+ * los atajos normales (cmd/ctrl/alt + tecla) sí tienen que funcionar desde
+ * adentro de la terminal.
+ */
+export function isTypingInTerminalInput(e: KeyboardEvent): boolean {
+  const el = document.activeElement
+  if (!(el instanceof HTMLElement) || !el.hasAttribute('data-vterm-input')) return false
+  return !e.metaKey && !e.ctrlKey && !e.altKey
+}
+
+/**
  * Construye un manejador de keydown que resuelve la combinación presionada
  * contra los keymaps efectivos y ejecuta el handler del comando que coincide.
  * Devuelve `true` cuando la tecla fue consumida por un comando (el llamador
@@ -24,10 +38,7 @@ export function makeKeyHandler(
   const parsedCache = new Map<string, ReturnType<typeof parseAccelerator> | null>()
 
   return (e: KeyboardEvent): boolean => {
-    if (skipWhenTyping) {
-      const el = document.activeElement
-      if (el instanceof HTMLElement && el.hasAttribute('data-vterm-input')) return false
-    }
+    if (skipWhenTyping && isTypingInTerminalInput(e)) return false
 
     const currentHandlers = resolveHandlers()
     for (const [command, acc] of Object.entries(keymaps)) {
